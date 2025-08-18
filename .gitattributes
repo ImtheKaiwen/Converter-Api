@@ -1,0 +1,16 @@
+/mvnw text eol=lf
+*.cmd text eol=crlf
+# Java & Spring
+*.java text
+*.xml text
+*.properties text
+
+# React & frontend
+*.js text
+*.jsx text
+*.css text
+*.html text
+
+# Scripts
+*.sh text eol=lf
+*.bat text eol=crlf
