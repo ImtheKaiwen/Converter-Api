@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: demo
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  datasource:
+    url: jdbc:h2:file:./data/demo-db   # kal?c? olmas? için dosya kullan?l?yor (mem yapsayd?k geçici olurdu)
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+    platform: h2
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    # ddl-auto seçenekleri:
+    # create   ? her ba?latmada s?f?rlar (tüm tabloyu siler ve tekrar olu?turur)
+    # update   ? sadece eksik tablolar? ekler, mevcut verileri silmez
+    # validate ? tablolar? kontrol eder, de?i?tirmez
+    # none     ? Hibernate tablolarla u?ra?maz
+
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: false
+        same-site: lax
+        name: JSESSIONID
+        path: /
+      persistent: false
+      store-type: none
