@@ -1,148 +1,125 @@
 package com.example.demo.controller;
 
+import com.example.demo.controller.resource.FileResource;
+import com.example.demo.controller.resource.UserResource;
 import com.example.demo.model.File;
-import com.example.demo.model.CurrentUser;
 import com.example.demo.service.FileService;
-import org.apache.coyote.Response;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import jakarta.servlet.http.HttpSession;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("api/files")
 public class FileController {
     public FileService fileService;
+    public static final Logger logger = LoggerFactory.getLogger(UserController.class);
     public FileController(FileService fileService) {
         this.fileService = fileService;
     }
 
     @GetMapping
-    public ResponseEntity<?> getFiles(HttpSession session) {
-        try{
-
-            CurrentUser currentUser = (CurrentUser) session.getAttribute("currentUser");
-            if (currentUser == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "User not logged in"));
+    public List<File> getFiles(HttpSession session) {
+            UserResource userResource = (UserResource) session.getAttribute("currentUser");
+            if (userResource == null) {
+                logger.error("UserResource is null");
+                return null;
             }
-
-            // hangi kullanıcı giriş yaptıysa onun dosyaları gelsin
-            List<File> files = fileService.findByUserId(currentUser.getId());
+            List<File> files = fileService.findByUserId(userResource.getId());
             if (files.isEmpty()) {
-                System.out.println("No files found for user: " + currentUser.getId());
-                return ResponseEntity.ok(Map.of("success", true, "files", files, "message", "No files found"));
+                logger.error("UserResource is empty");
+                return null;
             }
-            return ResponseEntity.ok(Map.of("success", true, "files", files));
-        }catch (Exception e){
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success" , false, "message", e.getMessage()));
-        }
+            return files;
     }
 
     @PostMapping
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, HttpSession session) {
-        try{
-            CurrentUser currentUser = (CurrentUser) session.getAttribute("currentUser");
-            if (currentUser == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "User not logged in"));
-            }
-            
-            File newFile = new File();
-            Date createdDate = new Date();
-            newFile.setCreatedDate(createdDate);
-            newFile.setFileName(file.getOriginalFilename());
-            newFile.setFileType(file.getContentType());
-            newFile.setData(file.getBytes());
-            newFile.setUserId(currentUser.getId());
+    public File uploadFile(@RequestParam("file") MultipartFile file, HttpSession session) {
 
-            File savedFile = fileService.save(newFile);
-            if (savedFile != null) {
-                return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("success", true, "file", savedFile));
+            UserResource userResource = (UserResource) session.getAttribute("currentUser");
+            if (userResource == null) {
+                logger.error("UserResource is null");
+                return null;
             }
-            else{
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "File not saved"));
+
+            try {
+                File newFile = new File();
+                Date createdDate = new Date();
+                newFile.setCreatedDate(createdDate);
+                newFile.setFileName(file.getOriginalFilename());
+                newFile.setFileType(file.getContentType());
+                newFile.setData(file.getBytes());
+                newFile.setUserId(userResource.getId());
+
+                File savedFile = fileService.save(newFile);
+                if (savedFile != null) {
+                    logger.info("File saved successfully");
+                    return savedFile;
+                } else {
+                    logger.error("File save failed");
+                    return null;
+                }
+            }catch (Exception e){
+                logger.error(e.getMessage());
+                e.printStackTrace();
+                return null;
             }
-        }catch (Exception e){
-            System.out.println("Error : " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", e.getMessage()));
-        }
     }
 
     @PostMapping("/convert")
-    public ResponseEntity<?> convertFile(@RequestParam("file") MultipartFile file, HttpSession session) {
-        try{
-            CurrentUser currentUser = (CurrentUser) session.getAttribute("currentUser");
-            if (currentUser == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "User not logged in"));
+    public FileResource convertFile(@RequestParam("file") MultipartFile file, HttpSession session) {
+            UserResource userResource = (UserResource) session.getAttribute("currentUser");
+            if (userResource == null) {
+                logger.error("UserResource is null");
+                return null;
             }
-            
             String fileName = file.getOriginalFilename();
             if (!fileName.endsWith(".doc")  && !fileName.endsWith(".docx")) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "File format not supported"));
+                logger.error("File name not supported");
+                return null;
             }
+            try {
+                byte[] pdfBytes = fileService.convertWordToPdf(file);
+                File savedFile = new File();
+                Date createdDate = new Date();
+                savedFile.setCreatedDate(createdDate);
+                savedFile.setFileName(fileName.replaceAll("\\.docx?$", ".pdf"));
+                savedFile.setFileType("application/pdf");
+                savedFile.setData(pdfBytes);
+                savedFile.setUserId(userResource.getId());
 
-            byte[] pdfBytes = fileService.convertWordToPdf(file);
-
-            File savedFile = new File();
-            Date createdDate = new Date();
-            savedFile.setCreatedDate(createdDate);
-            savedFile.setFileName(fileName.replaceAll("\\.docx?$" , ".pdf"));
-            savedFile.setFileType("application/pdf");
-            savedFile.setData(pdfBytes);
-            savedFile.setUserId(currentUser.getId());
-            
-            File repositoryFile = fileService.save(savedFile);
-            if (repositoryFile != null) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", true);
-                response.put("fileId", repositoryFile.getId());
-                response.put("fileName", repositoryFile.getFileName());
-                response.put("createdDate", repositoryFile.getCreatedDate());
-                return ResponseEntity.ok(response);
-            } else {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "File not saved");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+                File repositoryFile = fileService.save(savedFile);
+                if (repositoryFile != null) {
+                    logger.info("File saved successfully");
+                    return new FileResource(repositoryFile.getId(), repositoryFile.getFileName(), repositoryFile.getCreatedDate());
+                } else {
+                    logger.error("File save failed");
+                    return null;
+                }
+            }catch (Exception e){
+                logger.error(e.getMessage());
+                e.printStackTrace();
+                return null;
             }
-
-        }catch (Exception e){
-            System.out.println("Error : " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", e.getMessage()));
-        }
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable("id") Long id, HttpSession session) {
-        try {
-
-            CurrentUser currentUser = (CurrentUser) session.getAttribute("currentUser");
-            if (currentUser == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public byte[] downloadFile(@PathVariable("id") Long id, HttpSession session) {
+            UserResource userResource = (UserResource) session.getAttribute("currentUser");
+            if (userResource == null) {
+                logger.error("UserResource is null");
+                return null;
             }
-            
-            File file = fileService.getFileByIdAndUserId(id, currentUser.getId());
+            File file = fileService.getFileByIdAndUserId(id, userResource.getId());
             if (file == null) {
-                return ResponseEntity.notFound().build();
+                logger.error("File not found");
+                return null;
             }
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
-                    .contentType(MediaType.parseMediaType(file.getFileType()))
-                    .body(file.getData());
-        } catch (Exception e) {
-            System.err.println("Download error: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+            logger.info("File download successfully");
+            return file.getData();
     }
 }

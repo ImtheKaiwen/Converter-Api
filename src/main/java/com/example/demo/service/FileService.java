@@ -42,30 +42,21 @@ public class FileService {
 
     public byte[] convertWordToPdf(MultipartFile file) throws Exception {
         try {
-            System.out.println("Starting conversion for file: " + file.getOriginalFilename());
-            System.out.println("File size: " + file.getSize() + " bytes");
-            System.out.println("File content type: " + file.getContentType());
-            
+
 
             WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.load(file.getInputStream());
-            System.out.println("Word document loaded successfully");
-            
+
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
             
 
             Docx4J.toPDF(wordMLPackage, os);
             
-            System.out.println("Successfully converted word to PDF. Size: " + os.size() + " bytes");
             return os.toByteArray();
         } catch (Exception e) {
-            System.err.println("Error during PDF conversion: " + e.getMessage());
-            System.err.println("Exception type: " + e.getClass().getSimpleName());
             e.printStackTrace();
             
-
             try {
-                System.out.println("Alternatif");
                 WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.load(file.getInputStream());
                 ByteArrayOutputStream os = new ByteArrayOutputStream();
                 
@@ -75,17 +66,13 @@ public class FileService {
                 PdfConversion converter = new Conversion(wordMLPackage);
                 converter.output(os, pdfSettings);
                 
-                System.out.println("Alternative conversion successful. Size: " + os.size() + " bytes");
                 return os.toByteArray();
             } catch (Exception e2) {
-                System.err.println("Alternative docx4j conversion also failed: " + e2.getMessage());
-                
+
 
                 try {
-                    System.out.println("Trying POI + iText conversion as final fallback...");
                     return alternativePdfService.convertWordToPdfWithPOI(file);
                 } catch (Exception e3) {
-                    System.err.println("POI + iText conversion also failed: " + e3.getMessage());
                     e3.printStackTrace();
                     throw new RuntimeException("PDF conversion failed with all methods. docx4j: " + e.getMessage() + ", POI: " + e3.getMessage(), e);
                 }

@@ -2,11 +2,14 @@ package com.example.demo.model;
 
 import jakarta.persistence.*;
 import org.docx4j.model.properties.paragraph.PBorderRight;
-
+import lombok.*;
 import java.util.Date;
 
 @Entity
 @Table(name = "files")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class File {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -19,48 +22,4 @@ public class File {
     @Lob
     private byte[] data;
 
-
-    public Date getCreatedDate() {
-        return createdDate;
-    }
-
-    public void setCreatedDate(Date createdDate) {
-        this.createdDate = createdDate;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public String getFileType() {
-        return fileType;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public void setFileType(String fileType) {
-        this.fileType = fileType;
-    }
-
-    public void setData(byte[] data) {
-        this.data = data;
-    }
-
-    public byte[] getData() {
-        return data;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
 }

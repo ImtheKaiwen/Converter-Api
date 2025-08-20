@@ -8,21 +8,23 @@ spring:
       path: /h2-console
 
   datasource:
-    url: jdbc:h2:file:./data/demo-db   # kal?c? olmas? için dosya kullan?l?yor (mem yapsayd?k geçici olurdu)
+    url: jdbc:h2:file:./data/demo-db   # kal?c? olmas? iï¿½in dosya kullan?l?yor (mem yapsayd?k geï¿½ici olurdu)
     driverClassName: org.h2.Driver
     username: sa
     password:
-    platform: h2
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
-    # ddl-auto seçenekleri:
-    # create   ? her ba?latmada s?f?rlar (tüm tabloyu siler ve tekrar olu?turur)
+    # ddl-auto seï¿½enekleri:
+    # create   ? her ba?latmada s?f?rlar (tï¿½m tabloyu siler ve tekrar olu?turur)
     # update   ? sadece eksik tablolar? ekler, mevcut verileri silmez
     # validate ? tablolar? kontrol eder, de?i?tirmez
     # none     ? Hibernate tablolarla u?ra?maz
+  sql:
+    init:
+      platform: h2
 
 server:
   servlet:
